@@ -1,5 +1,7 @@
 # Clinical NLP to FHIR Pipeline
 
+ #### VIDEO DEMO: https://www.youtube.com/watch?v=SZrI40DlZew
+
 ## Overview
 This project is a clinical text processing pipeline written in Python. It takes unstructured medical text (radiology reports, doctor's notes, etc.), pulls out the relevant clinical and anatomical terms, and converts them into a valid **HL7 FHIR R4** JSON structure.
 
