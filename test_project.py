@@ -1,5 +1,5 @@
 import pytest
-from NLP2FHIR.project import (
+from project import (
     app,
     clean_text,
     extract_entities,
