@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical NLP to FHIR Pipeline</title>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0076D6;
+            --primary-light: #E6F3FE;
+            --background: #F4F7FB;
+
+            --surface: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .badge {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        button.btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 1rem;
+        }
+
+        button.btn-primary:hover {
+            background-color: #0062B3;
+        }
+
+        button.btn-primary:disabled {
+            background-color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* JSON output panel */
+        .json-container {
+            background-color: #1E293B;
+            color: #E2E8F0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            overflow: hidden;
+            flex-grow: 1;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            /* folded by default */
+            position: relative;
+            transition: max-height 0.4s ease-in-out;
+            cursor: pointer;
+        }
+
+        .json-container.expanded {
+            max-height: 600px;
+            overflow-y: auto;
+            cursor: auto;
+        }
+
+        .json-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(30, 41, 59, 0), rgba(30, 41, 59, 1));
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 0.5rem;
+            color: #38BDF8;
+            font-size: 0.85rem;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .json-container.expanded .json-overlay {
+            opacity: 0;
+        }
+
+        button.btn-secondary {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button.btn-secondary:hover {
+            background-color: #D0E7FA;
+        }
+
+        .error-message {
+            color: var(--error);
+            font-weight: 500;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Privacy note at the bottom of the input panel */
+        .privacy-note {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: auto;
+            text-align: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* Mobile layout */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container fade-in">
+        <div class="header">
+            <div class="header-title">
+                <!-- Heartbeat icon -->
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+                <h1>Clinical NLP to FHIR</h1>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span class="badge">RGPD Compliant - 100% Local Processing</span>
+                <img src="/static/img/nlp2fhir_small.png" alt="NLP2FHIR Logo"
+                    style="height: 80px; object-fit: contain;">
+            </div>
+        </div>
+
+        <!-- Input panel -->
+        <div class="card">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Patient Data Input
+            </h2>
+
+            <div class="form-group">
+                <label for="patient-id">Patient ID</label>
+                <input type="text" id="patient-id" value="pat-12345" placeholder="e.g. pat-98765">
+            </div>
+
+            <div class="form-group">
+                <label for="clinical-text">Clinical Text (Multilingual Supported)</label>
+                <textarea id="clinical-text"
+                    placeholder="Enter radiology report, doctor's notes, etc...">The patient presents with severe pneumonia et une possible fracture du fémur gauche. Antécédents d'asthme.</textarea>
+            </div>
+
+            <button id="process-btn" class="btn-primary" onclick="submitData()">Process to FHIR</button>
+            <div id="error-box" class="error-message"></div>
+
+            <div class="privacy-note">
+                No data is saved to disk or sent to any external server. Text is processed in memory only.
+            </div>
+        </div>
+
+        <!-- Output panel -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    FHIR R4 JSON Output
+                </h2>
+                <button id="download-btn" class="btn-secondary" onclick="downloadJSON()" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download JSON
+                </button>
+            </div>
+
+            <div id="json-container-wrapper" class="json-container" onclick="toggleJSON()">
+                <div id="json-output">// FHIR output will appear here...</div>
+                <div class="json-overlay" id="json-overlay" style="display: none;">Click to expand</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJSON = null;
+
+        function toggleJSON() {
+            const container = document.getElementById('json-container-wrapper');
+            if (currentJSON && !container.classList.contains('expanded')) {
+                container.classList.add('expanded');
+            }
+        }
+
+        function downloadJSON() {
+            if (!currentJSON) return;
+            // Build a temporary blob URL client-side — nothing is sent to the server
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentJSON, null, 2));
+            const dlNode = document.createElement('a');
+            dlNode.setAttribute("href", dataStr);
+            dlNode.setAttribute("download", `FHIR_Report_${document.getElementById('patient-id').value}.json`);
+            document.body.appendChild(dlNode);
+            dlNode.click();
+            dlNode.remove();
+        }
+
+        async function submitData() {
+            const patientId = document.getElementById('patient-id').value.trim();
+            const text = document.getElementById('clinical-text').value.trim();
+            const btn = document.getElementById('process-btn');
+            const errorBox = document.getElementById('error-box');
+            const jsonOutput = document.getElementById('json-output');
+            const wrapper = document.getElementById('json-container-wrapper');
+
+            if (!patientId || !text) {
+                errorBox.style.display = 'block';
+                errorBox.innerText = "Please provide both Patient ID and Clinical Text.";
+                return;
+            }
+
+            // Reset the UI before the new request
+            errorBox.style.display = 'none';
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            jsonOutput.innerText = "Extracting entities and serializing to FHIR...";
+            wrapper.classList.remove('expanded');
+            document.getElementById('json-overlay').style.display = 'none';
+            document.getElementById('download-btn').style.display = 'none';
+            currentJSON = null;
+
+            try {
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        patient_id: patientId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "An unknown error occurred.");
+                }
+
+                currentJSON = data;
+
+                // Show the result
+                jsonOutput.innerText = JSON.stringify(data, null, 2);
+                document.getElementById('json-overlay').style.display = 'flex';
+                document.getElementById('download-btn').style.display = 'flex';
+
+                // Re-run the fade-in animation
+                wrapper.classList.remove('fade-in');
+                void wrapper.offsetWidth;
+                wrapper.classList.add('fade-in');
+
+            } catch (error) {
+                errorBox.style.display = 'block';
+                errorBox.innerText = "Error: " + error.message;
+                jsonOutput.innerText = "// Error generating output.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Process to FHIR";
+            }
+        }
+    </script>
+
+</body>
+
+</html>
